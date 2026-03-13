@@ -32,16 +32,35 @@ def parse_txt(file_bytes):
 
 
 def parse_csv(file_bytes):
-    """Parse a .csv file into text (row-by-row)."""
+    """Parse a .csv file and return (raw_text, schema_summary)."""
     import csv
     import io
-
-    text = file_bytes.decode("utf-8")
-    reader = csv.reader(io.StringIO(text))
+    
+    text_content = file_bytes.decode("utf-8")
+    f = io.StringIO(text_content)
+    reader = csv.reader(f)
+    
+    headers = next(reader, None)
+    if not headers:
+        return text_content, "No headers found."
+    
+    # Get first few rows for type inference/preview
+    sample_rows = []
+    for _ in range(5):
+        try:
+            sample_rows.append(next(reader))
+        except StopIteration:
+            break
+            
+    schema_summary = f"Columns: {', '.join(headers)}\nSample Rows: {len(sample_rows)}"
+    
+    f.seek(0)
     rows = []
+    reader = csv.reader(f)
     for row in reader:
         rows.append(", ".join(row))
-    return "\n".join(rows)
+    
+    return "\n".join(rows), schema_summary
 
 
 def parse_pdf(file_bytes):
@@ -72,31 +91,31 @@ def parse_pdf(file_bytes):
 
 def process_uploaded_file(uploaded_file):
     """
-    Process an uploaded Streamlit file and return text chunks.
-    Returns (chunks, error_msg) tuple.
+    Process an uploaded Streamlit file and return (text_chunks, schema_info, error_msg).
     """
     try:
         file_bytes = uploaded_file.read()
         filename = uploaded_file.name.lower()
+        schema_info = None
 
         if filename.endswith(".txt"):
             text = parse_txt(file_bytes)
         elif filename.endswith(".csv"):
-            text = parse_csv(file_bytes)
+            text, schema_info = parse_csv(file_bytes)
         elif filename.endswith(".pdf"):
             text = parse_pdf(file_bytes)
         else:
-            return [], f"Unsupported file type: {uploaded_file.name}"
+            return [], None, f"Unsupported file type: {uploaded_file.name}"
 
         if not text.strip():
-            return [], "File appears to be empty or could not be read."
+            return [], None, "File appears to be empty or could not be read."
 
         chunks = chunk_text(text)
 
         if not chunks:
-            return [], "No text content could be extracted from the file."
+            return [], None, "No text content could be extracted from the file."
 
-        return chunks, None
+        return chunks, schema_info, None
 
     except Exception as e:
-        return [], f"Error processing file: {e}"
+        return [], None, f"Error processing file: {e}"

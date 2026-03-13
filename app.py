@@ -13,10 +13,20 @@ from utils.cloudinary_storage import upload_document_to_cloudinary
 
 
 st.set_page_config(
-    page_title="Data Analyst AI Assistant",
+    page_title="NeoStats Data Analyst AI",
     page_icon="📊",
     layout="wide"
 )
+
+# Load custom CSS
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+try:
+    load_css("assets/style.css")
+except:
+    pass
 
 # --- INIT SESSION STATES ---
 if "user" not in st.session_state:
@@ -37,6 +47,9 @@ if "uploaded_files" not in st.session_state:
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
 
+if "schema_context" not in st.session_state:
+    st.session_state.schema_context = ""
+
 # --- RESTORE SESSION ON RELOAD ---
 # This checks if we have stored auth tokens and restores the user session
 if not st.session_state.user:
@@ -44,7 +57,7 @@ if not st.session_state.user:
     if restored and st.session_state.user:
         pass # Default to a new chat upon reload 
 
-st.title("📊 Data Analyst AI Assistant")
+# --- MAIN INTERFACE ---
 
 # --- SIDEBAR UI ---
 with st.sidebar:
@@ -53,6 +66,7 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.vector_store = VectorStore()
         st.session_state.uploaded_files = set()
+        st.session_state.schema_context = ""
         st.rerun()
 
     st.markdown("### 💬 Your Chats")
@@ -71,6 +85,7 @@ with st.sidebar:
                     st.session_state.messages = []
                     st.session_state.vector_store = VectorStore()  # Knowledge resets per session switch
                     st.session_state.uploaded_files = set()
+                    st.session_state.schema_context = ""
                     for chat in history:
                         st.session_state.messages.append({"role": "user", "content": chat["user_message"]})
                         st.session_state.messages.append({"role": "assistant", "content": chat["ai_message"]})
@@ -133,8 +148,14 @@ if st.session_state.show_login and not st.session_state.user:
 
     st.stop()
 
+# --- HEADER SECTION ---
+st.markdown('<div class="main-header">', unsafe_allow_html=True)
+col_title, _ = st.columns([0.65, 0.35])
+with col_title:
+    st.markdown("### 📊 Data Analyst AI Assistant")
+
 # --- MAIN CHAT UI CONTROLS ---
-col_model, col_mode = st.columns([3, 1])
+col_model, col_mode = st.columns([3, 0.8], gap="small")
 with col_model:
     model = st.selectbox(
         "Choose Model",
@@ -149,160 +170,209 @@ with col_model:
 with col_mode:
     mode = st.selectbox("Response Mode", ["Concise", "Detailed"], label_visibility="collapsed")
 
-st.markdown("---")
+st.divider()
+st.markdown('</div>', unsafe_allow_html=True)
 
-# DISPLAY CHAT HISTORY
+# --- STATIC ATTACHMENT SECTION (Per Screenshot) ---
+with st.popover("📎 Attach", help="Add documents or context"):
+    st.markdown("##### 📎 NeoStats Data Context")
+    uploaded_file = st.file_uploader(
+        "Upload Data Source",
+        type=["txt", "csv", "pdf"],
+        key="doc_uploader_main",
+        label_visibility="collapsed"
+    )
+    st.divider()
+    st.caption("Available Analyzers:")
+    st.button("📊 SQL Schema Analyst", disabled=True, use_container_width=True, key="sql_ana_main")
+    st.button("📈 Trend Optimizer", disabled=True, use_container_width=True, key="trend_opt_main")
+    st.button("🧠 Deep RAG Search", disabled=True, use_container_width=True, key="rag_search_main")
+    
+    if uploaded_file and uploaded_file.name not in st.session_state.uploaded_files:
+        with st.spinner("Processing..."):
+            try:
+                c_url, _ = upload_document_to_cloudinary(uploaded_file.getvalue(), uploaded_file.name)
+                uploaded_file.seek(0)
+                chunks, schema_info, error = process_uploaded_file(uploaded_file)
+                if not error:
+                    for chunk in chunks:
+                        st.session_state.vector_store.add_document(chunk, metadata={"source": uploaded_file.name})
+                    if schema_info:
+                        st.session_state.schema_context += f"\n\nSource: {uploaded_file.name}\nSchema: {schema_info}"
+                    st.session_state.uploaded_files.add(uploaded_file.name)
+                    st.rerun()
+                else:
+                    st.error(error)
+            except Exception as e:
+                st.error(f"Upload error: {e}")
 
-for msg in st.session_state.messages:
+# --- DATA CONTEXT INDICATOR ---
+if st.session_state.uploaded_files:
+    file_list = ", ".join(list(st.session_state.uploaded_files))
+    st.caption(f"📚 **Active Files:** {file_list}")
 
-    st.chat_message(msg["role"]).write(msg["content"])
+# --- CHAT HISTORY AREA ---
+chat_history_container = st.container()
 
+with chat_history_container:
+    # Always show welcome message at the top
+    with st.chat_message("assistant"):
+        st.markdown("""
+        ### 👋 Welcome to NeoStats Data Analyst AI
+        I am your specialized assistant for **SQL, PostgreSQL, MongoDB, and NoSQL** analytics.
+        
+        **How to get started:**
+        1.  📎 **Upload your Data**: Use the 'Attach' button below to upload a **CSV**, **Table Schema**, or **SQL Documentation**.
+        2.  🔍 **Analyze**: Ask me to write queries, explain trends, or optimize logic based on your data.
+        3.  ⚖️ **Mode**: Toggle between **Concise** (quick SQL) and **Detailed** (deep reasoning) in the top menu.
+        
+        *Note: I am strictly specialized for data analysis and will only respond to analytics-related inquiries.*
+        """)
 
-# ATTACHMENT POPOVER (Positioned right above chat input)
-with st.container():
-    col_attach, col_info = st.columns([1, 4])
-    with col_attach:
-        with st.popover("📎 Attach"):
+    # Show existing history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            if msg["role"] == "assistant" and msg.get("sources"):
+                st.caption(f"📚 *Sources referenced:* {', '.join(msg['sources'])}")
+
+# --- CHAT INPUT & ATTACHMENT ROW ---
+st.markdown('<div class="bottom-dock-container">', unsafe_allow_html=True)
+input_row = st.container()
+with input_row:
+    if not st.session_state.uploaded_files:
+        st.markdown(
+            '<div class="compact-tip">📊 <b>NeoStats Tip:</b> Upload a CSV, Schema, or PDF for better insights.</div>', 
+            unsafe_allow_html=True
+        )
+    
+    # Optimized columns for the ChatGPT dock
+    col_at, col_in = st.columns([0.65, 9.35], gap="small")
+    with col_at:
+        with st.popover("➕", help="Add documents or context"):
+            st.markdown("##### 📎 NeoStats Data Context")
             uploaded_file = st.file_uploader(
-                "Knowledge Base Document",
+                "Upload Data Source",
                 type=["txt", "csv", "pdf"],
-                key="doc_uploader",
+                key="doc_uploader_dock",
                 label_visibility="collapsed"
             )
+            st.divider()
+            st.caption("Available Analyzers:")
+            st.button("📊 SQL Schema Analyst", disabled=True, use_container_width=True, key="sql_ana_dock")
+            st.button("📈 Trend Optimizer", disabled=True, use_container_width=True, key="trend_opt_dock")
+            st.button("🧠 Deep RAG Search", disabled=True, use_container_width=True, key="rag_search_dock")
+            
             if uploaded_file and uploaded_file.name not in st.session_state.uploaded_files:
-                with st.spinner(f"Uploading {uploaded_file.name}..."):
+                with st.spinner("Processing..."):
                     try:
-                        # 1. Cloudinary
                         c_url, _ = upload_document_to_cloudinary(uploaded_file.getvalue(), uploaded_file.name)
-                        st.toast(f"Saved to Cloudinary!")
-                        
-                        # 2. Local Vector Store (RAG)
                         uploaded_file.seek(0)
-                        chunks, error = process_uploaded_file(uploaded_file)
+                        chunks, schema_info, error = process_uploaded_file(uploaded_file)
                         if not error:
                             for chunk in chunks:
                                 st.session_state.vector_store.add_document(chunk, metadata={"source": uploaded_file.name})
+                            if schema_info:
+                                st.session_state.schema_context += f"\n\nSource: {uploaded_file.name}\nSchema: {schema_info}"
                             st.session_state.uploaded_files.add(uploaded_file.name)
-                            st.success(f"✅ Indexed for chat context!")
+                            st.rerun()
                         else:
                             st.error(error)
                     except Exception as e:
                         st.error(f"Upload error: {e}")
-                        
-    with col_info:
-        doc_count = len(st.session_state.vector_store.documents)
-        if doc_count > 0:
-            st.caption(f"📚 {doc_count} context chunks active")
 
+    with col_in:
+        user_input = st.chat_input("Ask your analytics question...")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# CHAT INPUT
-
-user_input = st.chat_input("Ask your analytics question...")
-
-
+# Process input if it exists
 if user_input:
+    with chat_history_container:
+        # 1. User Message
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.write(user_input)
 
-    # Auto-create session if None
-    if st.session_state.user and not st.session_state.current_session_id:
-        title = user_input[:30] + "..." if len(user_input) > 30 else user_input
-        new_sid = create_chat_session(st.session_state.user.id, title=title)
-        st.session_state.current_session_id = new_sid
-
-    st.session_state.messages.append(
-        {"role": "user", "content": user_input}
-    )
-
-    st.chat_message("user").write(user_input)
-
-    rag_results = st.session_state.vector_store.search(user_input)
-
-    # Format context and track used sources
-    used_sources = set()
-    rag_context_parts = []
-    for res in rag_results:
-        source_name = res["metadata"].get("source", "Unknown Document")
-        used_sources.add(source_name)
-        rag_context_parts.append(f"[Source: {source_name}]\n{res['text']}")
-        
-    rag_context = "\n\n".join(rag_context_parts)
-
-    web_results = search_web(user_input)
-    web_context = "\n".join(web_results)
-
-    context = f"{rag_context}\n\n{web_context}"
-
-
-    if mode == "Concise":
-
-        system_prompt = (
-            "You are a senior Data Analyst AI Assistant. "
-            "Give short, precise answers focused on data insights, SQL queries, "
-            "metrics, and actionable analytics. Use bullet points where helpful. "
-            "If the user provides document context, prioritize that data."
-        )
-
-    else:
-
-        system_prompt = (
-            "You are a senior Data Analyst AI Assistant. "
-            "Provide detailed, in-depth analytical responses. Explain your reasoning step-by-step, "
-            "include SQL query logic where relevant, describe statistical methods, "
-            "suggest visualizations, and provide actionable business insights. "
-            "If the user provides document context, analyze it thoroughly."
-        )
-
-    messages = [
-
-        {"role": "system", "content": system_prompt},
-
-        {"role": "user", "content": f"Context:\n{context}\n\nQuestion:{user_input}"}
-
-    ]
-
-
-    try:
-        response = generate_response(model, messages)
-    except Exception as e:
-        response = f"⚠️ Could not get a response right now. Please try again in a moment or switch to a different model.\n\n_Error: {e}_"
-
-
-    st.session_state.messages.append(
-        {"role": "assistant", "content": response}
-    )
-
-    st.chat_message("assistant").write(response)
-    
-    if used_sources:
-        st.caption(f"📚 *Sources referenced:* {', '.join(used_sources)}")
-
-
-
-    # SAVE TO SUPABASE ONLY IF USER LOGGED IN
-
-    if st.session_state.user:
-
-        saved, save_error = save_chat(
-            st.session_state.user.id,
-            st.session_state.current_session_id,
-            user_input,
-            response
-        )
-        if not saved:
-            st.toast(f"⚠️ Chat could not be saved: {save_error}", icon="⚠️")
-            
-            if "relation \"chat_sessions\" does not exist" in str(save_error) or "column \"session_id\" of relation \"chats\" does not exist" in str(save_error):
-                st.error("""
-                **Database Setup Required!**
-                To support chat sessions, please run this SQL query in your Supabase SQL Editor:
+        # 2. Assistant Response
+        with st.chat_message("assistant"):
+            with st.spinner("🧠 NeoStats Analyst is thinking..."):
+                # RAG & Context Prep
+                rag_results = st.session_state.vector_store.search(user_input)
+                used_sources = set()
+                rag_context_parts = []
+                for res in rag_results:
+                    source_name = res["metadata"].get("source", "Unknown Document")
+                    used_sources.add(source_name)
+                    rag_context_parts.append(f"[Source: {source_name}]\n{res['text']}")
+                rag_context = "\n\n".join(rag_context_parts)
                 
-                ```sql
-                CREATE TABLE IF NOT EXISTS chat_sessions (
-                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-                    title TEXT NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
-                );
+                web_results = search_web(user_input)
+                web_context = "\n".join(web_results)
+                context = f"{rag_context}\n\n{web_context}"
+
+                # Persona
+                base_system_prompt = (
+                    "You are the NeoStats Data Analyst AI, an expert specialized EXCLUSIVELY in data analytics, SQL (PostgreSQL, MySQL, SQLite), NoSQL, MongoDB queries, and business intelligence. "
+                    "Strict Policy: You MUST only answer questions related to data analysis, SQL/NoSQL queries, data trends, or analytics documentation. "
+                    "You are proficient in generating complex queries for MongoDB (Aggregations), PostgreSQL (JSONB, Window Functions), and other modern database systems. "
+                    "If the user asks about ANY other topic, remind them you are an analytics specialist."
+                )
                 
-                ALTER TABLE chats ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE;
-                ```
-                """)
+                if mode == "Concise":
+                    system_prompt = f"{base_system_prompt}\nGive short, precise answers focused on SQL queries."
+                else:
+                    system_prompt = f"{base_system_prompt}\nProvide detailed explanations of query logic and analytical reasoning."
+
+                if st.session_state.schema_context:
+                    system_prompt += f"\n\nAnalyzable Data Schema Knowledge:\n{st.session_state.schema_context}"
+
+                full_prompt = f"Context:\n{st.session_state.schema_context}\n{context}\n\nQuestion: {user_input}"
+                
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Context:\n{context}\n\nQuestion:{user_input}"}
+                ]
+
+                try:
+                    response = generate_response(model, messages)
+                except Exception as e:
+                    response = f"⚠️ Could not get a response. Error: {e}"
+
+                st.markdown(response)
+                
+                if used_sources:
+                    st.caption(f"📚 *Sources referenced:* {', '.join(used_sources)}")
+                
+                # Save to history
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": response,
+                    "sources": list(used_sources)
+                })
+
+                if st.session_state.user:
+                    if not st.session_state.current_session_id:
+                        title = user_input[:30] + "..." if len(user_input) > 30 else user_input
+                        st.session_state.current_session_id = create_chat_session(st.session_state.user.id, title=title)
+                    
+                    saved, save_error = save_chat(st.session_state.user.id, st.session_state.current_session_id, user_input, response)
+                    if not saved:
+                        st.toast(f"⚠️ Chat could not be saved: {save_error}", icon="⚠️")
+                        if "relation \"chat_sessions\" does not exist" in str(save_error) or "column \"session_id\" of relation \"chats\" does not exist" in str(save_error):
+                            st.error("""
+                            **Database Setup Required!**
+                            To support chat sessions, please run this SQL query in your Supabase SQL Editor:
+                            
+                            ```sql
+                            CREATE TABLE IF NOT EXISTS chat_sessions (
+                                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+                                title TEXT NOT NULL,
+                                created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+                            );
+                            
+                            ALTER TABLE chats ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE;
+                            ```
+                            """)
+
+    # All processing done for this interaction

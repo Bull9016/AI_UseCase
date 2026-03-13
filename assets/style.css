@@ -1,0 +1,271 @@
+/* NeoStats Premium Theme */
+:root {
+    --primary: #00D1FF;
+    --secondary: #7000FF;
+    --bg-dark: #0F1117;
+    --card-bg: #1E222D;
+    --text-main: #E2E8F0;
+    --accent: #FF00E5;
+}
+
+.stApp {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* Chat Message Styling */
+[data-testid="stChatMessage"] {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+[data-testid="stChatMessage"][data-testid="stChatMessageContentUser"] {
+    background: linear-gradient(135deg, rgba(0, 209, 255, 0.1), rgba(112, 0, 255, 0.1));
+    border: 1px solid rgba(0, 209, 255, 0.2);
+}
+
+/* Sidebar Styling */
+[data-testid="stSidebar"] {
+    background-color: #161922;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Buttons */
+.stButton>button {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.8rem;
+}
+
+.stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 209, 255, 0.3);
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    color: white;
+}
+
+/* Selection Boxes */
+.stSelectbox div[data-baseweb="select"] {
+    background-color: #2D333F;
+    border-radius: 8px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom Header */
+.main-header {
+    background: linear-gradient(90deg, #00D1FF, #7000FF);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Header Branding Container */
+.sticky-header {
+    background-color: var(--bg-dark);
+    padding-top: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+}
+
+/* Ensure the container for model/mode selectors is also sticky if they are separate */
+div:has(> div > div > select) {
+    background-color: var(--bg-dark);
+}
+
+.analyst-badge {
+    background: rgba(0, 209, 255, 0.1);
+    color: #00D1FF;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 1px solid rgba(0, 209, 255, 0.3);
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+/* Attach button per screenshot */
+[data-testid="stPopover"] button {
+    background-color: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 8px !important;
+    color: white !important;
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem !important;
+    text-transform: none !important;
+    width: auto !important;
+    min-width: 80px !important;
+}
+
+[data-testid="stPopover"] button:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Main Header Context */
+.main-header {
+    margin-top: -40px;
+    margin-bottom: 10px;
+}
+
+.main-header h3 {
+    background: linear-gradient(90deg, #FFFFFF, #A0AEC0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+}
+
+/* Selection Boxes - Match screenshot dark grey */
+.stSelectbox div[data-baseweb="select"] {
+    background-color: #1E222D !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Truly pinned bottom dock like ChatGPT */
+.bottom-dock-container {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 21rem !important;
+    right: 0 !important;
+    width: auto !important;
+    background: linear-gradient(0deg, var(--bg-dark) 50%, transparent 100%) !important;
+    padding: 80px 40px 30px 40px !important;
+    z-index: 10000 !important;
+    pointer-events: none; /* Allow clicking through the fade area */
+}
+
+/* Allow interaction with the input bar itself */
+.bottom-dock-container > div {
+    pointer-events: auto;
+}
+
+@media (max-width: 992px) {
+    .bottom-dock-container {
+        left: 0 !important;
+        padding: 60px 10px 20px 10px !important;
+    }
+}
+
+/* The Floating Bar itself */
+.bottom-dock-container [data-testid="stHorizontalBlock"] {
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    background-color: #262730 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 14px !important;
+    padding: 8px 16px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+    align-items: center !important;
+}
+
+/* circular plus button styling for the dock specifically */
+div.bottom-dock-container [data-testid="stPopover"] button,
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stPopover"] button {
+    height: 38px !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    border-radius: 50% !important;
+    background-color: #2D333F !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #E2E8F0 !important;
+    font-size: 1.2rem !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Header Attach Button - Keep it rectangular as per screenshot */
+.main-header + div [data-testid="stPopover"] button,
+div:has(> .main-header) + div [data-testid="stPopover"] button {
+    height: auto !important;
+    width: auto !important;
+    min-width: 100px !important;
+    border-radius: 8px !important;
+    padding: 0.4rem 1rem !important;
+    font-size: 0.9rem !important;
+}
+
+@media (max-width: 768px) {
+    [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
+        width: 100% !important;
+    }
+}
+
+/* Center all children of the pinned area */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) > div > div {
+    max-width: 800px !important;
+    margin: 0 auto !important;
+}
+
+/* Compact Tip Styling */
+.compact-tip {
+    background-color: rgba(255, 171, 0, 0.1);
+    color: #FFAB00;
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    max-width: 800px;
+    margin: 0 auto 12px auto;
+    text-align: center;
+    border: 1px solid rgba(255, 171, 0, 0.2);
+    font-weight: 500;
+}
+
+/* Specific alignment for the attachment column inside the pinned area */
+div[data-testid="column"]:first-child:has(button) {
+    display: flex;
+    justify-content: center;
+}
+
+/* Space for the docked input at the bottom of the page */
+.stApp {
+    padding-bottom: 220px !important;
+}
+
+.stAppViewMain [data-testid="stVerticalBlock"]:has(> [data-testid="stChatMessage"]) {
+    padding-bottom: 80px !important;
+}
+
+/* history container padding to prevent overlap with dock */
+.stVerticalBlock:has(> [data-testid="stChatMessage"]) {
+    padding-bottom: 120px !important;
+}
+
+/* Remove extra whitespace from Streamlit components */
+.stVerticalBlock {
+    gap: 0.5rem !important;
+}
+
+/* Hide Streamlit's default footer to save space */
+footer {visibility: hidden;}
+button[title="View source"] {display: none;}
