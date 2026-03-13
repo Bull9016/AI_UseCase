@@ -1,0 +1,14 @@
+streamlit
+openai
+supabase
+python-dotenv
+langchain
+langchain-community
+faiss-cpu
+sentence-transformers
+requests
+duckduckgo-search
+tiktoken
+numpy
+PyPDF2
+cloudinary

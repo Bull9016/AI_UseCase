@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+.venv/
+
+# Environment variables (secrets)
+config/.env
+.streamlit/secrets.toml
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Agent/tool folders
+.agent/
+.agents/
+.kluster/
