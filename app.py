@@ -21,19 +21,15 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-.chat-input-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #0e1117;
-    padding: 10px 20px;
-    border-top: 1px solid #333;
-    z-index: 999;
+.main .block-container {
+    padding-bottom: 120px;
 }
 
-.chat-messages {
-    padding-bottom: 100px;
+/* Scrollable chat area */
+.chat-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 10px;
 }
 
 </style>
@@ -101,9 +97,12 @@ with st.sidebar:
         sessions = get_chat_sessions(st.session_state.user.id)
         if sessions:
             for s in sessions:
-                # Add a distinct visual look for active session
-                btn_label = f"📌 {s['title']}" if st.session_state.current_session_id == s['id'] else s['title']
-                if st.button(btn_label, key=s["id"], use_container_width=True):
+                # Highlight the active session
+                is_active = str(st.session_state.current_session_id) == str(s['id'])
+                btn_type = "primary" if is_active else "secondary"
+                btn_label = f"💬 {s['title']}" if not is_active else f"🎯 {s['title']}"
+                
+                if st.button(btn_label, key=s["id"], use_container_width=True, type=btn_type):
                     st.session_state.current_session_id = s["id"]
                     history = get_chat_history(s["id"])
                     st.session_state.messages = []
@@ -263,7 +262,7 @@ if st.session_state.uploaded_files:
 chat_history_container = st.container()
 
 with chat_history_container:
-    st.markdown('<div class="chat-messages">', unsafe_allow_html=True)
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 
     # Always show welcome message at the top
     with st.chat_message("assistant"):
@@ -298,92 +297,36 @@ with chat_history_container:
                 st.caption(f"📚 *Sources referenced:* {', '.join(links)}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- CHAT INPUT & ATTACHMENT ROW ---
-st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
-input_row = st.container(border=True)
-with input_row:
-    if not st.session_state.uploaded_files:
-        st.markdown(
-            '<div class="compact-tip">📊 <b>NeoStats Tip:</b> Upload a CSV, Schema, or PDF for better insights.</div>', 
-            unsafe_allow_html=True
-        )
-    else:
-        # Native Streamlit multiselect auto-generates pills with X marks for removal
-        selected = st.multiselect(
-            "📎 Active Context Files",
-            options=list(st.session_state.uploaded_files),
-            default=list(st.session_state.uploaded_files),
-            label_visibility="collapsed",
-            key="file_deleter_multiselect"
-        )
-        
-        # If the user clicked the 'X' on a pill, the length of selected will logically be smaller
-        if len(selected) != len(st.session_state.uploaded_files):
-            st.session_state.uploaded_files = set(selected)
-            for old_file in list(st.session_state.file_urls.keys()):
-                if old_file not in st.session_state.uploaded_files:
-                    del st.session_state.file_urls[old_file]
-            
-            if st.session_state.current_session_id:
-                from utils.supabase_db import update_session_metadata
-                update_session_metadata(
-                    st.session_state.current_session_id, 
-                    st.session_state.schema_context, 
-                    st.session_state.uploaded_files,
-                    file_urls=st.session_state.file_urls
-                )
-            st.rerun()
+# --- CONTEXT MANAGEMENT ---
+if st.session_state.uploaded_files:
+    # Native Streamlit multiselect auto-generates pills with X marks for removal
+    selected = st.multiselect(
+        "📎 Active Context Files",
+        options=list(st.session_state.uploaded_files),
+        default=list(st.session_state.uploaded_files),
+        label_visibility="collapsed",
+        key="file_deleter_multiselect"
+    )
     
-    # Optimized columns for the ChatGPT dock
-    col_at, col_in = st.columns([0.65, 9.35], gap="small")
-    with col_at:
-        with st.popover("➕", help="Add documents or context"):
-            st.markdown("##### 📎 NeoStats Data Context")
-            uploaded_file = st.file_uploader(
-                "Upload Data Source",
-                type=["txt", "csv", "pdf"],
-                key="doc_uploader_dock",
-                label_visibility="collapsed"
+    # If the user clicked the 'X' on a pill, the length of selected will logically be smaller
+    if len(selected) != len(st.session_state.uploaded_files):
+        st.session_state.uploaded_files = set(selected)
+        for old_file in list(st.session_state.file_urls.keys()):
+            if old_file not in st.session_state.uploaded_files:
+                del st.session_state.file_urls[old_file]
+        
+        if st.session_state.current_session_id:
+            from utils.supabase_db import update_session_metadata
+            update_session_metadata(
+                st.session_state.current_session_id, 
+                st.session_state.schema_context, 
+                st.session_state.uploaded_files,
+                file_urls=st.session_state.file_urls
             )
-            
-            if uploaded_file and uploaded_file.name not in st.session_state.uploaded_files:
-                with st.spinner("Processing..."):
-                    try:
-                        c_url, _ = upload_document_to_cloudinary(uploaded_file.getvalue(), uploaded_file.name)
-                        uploaded_file.seek(0)
-                        chunks, schema_info, error = process_uploaded_file(uploaded_file)
-                        if not error:
-                            for chunk in chunks:
-                                st.session_state.vector_store.add_document(chunk, metadata={"source": uploaded_file.name})
-                            if schema_info:
-                                st.session_state.schema_context += f"\n\nSource: {uploaded_file.name}\nSchema: {schema_info}"
-                            st.session_state.uploaded_files.add(uploaded_file.name)
-                            st.session_state.file_urls[uploaded_file.name] = c_url
-                            
-                            # Persist metadata to DB if session exists
-                            if st.session_state.current_session_id:
-                                from utils.supabase_db import update_session_metadata
-                                update_session_metadata(
-                                    st.session_state.current_session_id, 
-                                    st.session_state.schema_context, 
-                                    st.session_state.uploaded_files,
-                                    file_urls=st.session_state.file_urls
-                                )
-                            for chunk in chunks:
-                                st.session_state.vector_store.add_document(
-                                    chunk, 
-                                    metadata={"source": uploaded_file.name, "url": c_url}
-                                )
-                            st.rerun()
-                        else:
-                            st.error(error)
-                    except Exception as e:
-                        st.error(f"Upload error: {e}")
+        st.rerun()
 
-    with col_in:
-        user_input = st.chat_input("Ask your analytics question...")
-
-st.markdown('</div>', unsafe_allow_html=True)
+# --- CHAT INPUT ---
+user_input = st.chat_input("Ask your analytics question...")
 
 # Process input if it exists
 if user_input:
