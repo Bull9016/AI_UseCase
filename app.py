@@ -18,6 +18,27 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+<style>
+
+.chat-input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0e1117;
+    padding: 10px 20px;
+    border-top: 1px solid #333;
+    z-index: 999;
+}
+
+.chat-messages {
+    padding-bottom: 100px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 # Load custom CSS
 def load_css(file_name):
     with open(file_name) as f:
@@ -242,6 +263,8 @@ if st.session_state.uploaded_files:
 chat_history_container = st.container()
 
 with chat_history_container:
+    st.markdown('<div class="chat-messages">', unsafe_allow_html=True)
+
     # Always show welcome message at the top
     with st.chat_message("assistant"):
         st.markdown("""
@@ -273,8 +296,10 @@ with chat_history_container:
                         url = st.session_state.file_urls.get(str(s), "")
                         links.append(f"[{s}]({url})" if url else str(s))
                 st.caption(f"📚 *Sources referenced:* {', '.join(links)}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- CHAT INPUT & ATTACHMENT ROW ---
+st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
 input_row = st.container(border=True)
 with input_row:
     if not st.session_state.uploaded_files:
@@ -357,6 +382,8 @@ with input_row:
 
     with col_in:
         user_input = st.chat_input("Ask your analytics question...")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Process input if it exists
 if user_input:

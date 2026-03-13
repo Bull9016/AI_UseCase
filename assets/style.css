@@ -150,14 +150,24 @@ div:has(> div > div > select) {
 
 /* Truly pinned bottom dock like ChatGPT */
 [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
-    position: sticky !important;
+    position: fixed !important;
     bottom: 0 !important;
+    left: 21rem !important;
+    right: 0 !important;
+    width: auto !important;
     background: linear-gradient(0deg, var(--bg-dark) 40%, transparent 100%) !important;
-    padding: 60px 20px 20px 20px !important;
-    margin-bottom: -150px !important;
-    z-index: 1000 !important;
+    padding: 80px 40px 30px 40px !important;
+    margin: 0 !important;
+    z-index: 10000 !important;
     pointer-events: none; /* Let clicks pass through the fade area */
     border: none !important;
+}
+
+@media (max-width: 992px) {
+    [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
+        left: 0 !important;
+        padding: 60px 10px 20px 10px !important;
+    }
 }
 
 /* Re-enable clicking for the actual inner controls */
