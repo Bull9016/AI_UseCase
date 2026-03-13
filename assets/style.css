@@ -43,7 +43,7 @@
     border: none;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-size: 0.8rem;
+    font-size: 1rem;
 }
 
 .stButton>button:hover {
@@ -100,9 +100,9 @@ div:has(> div > div > select) {
 .analyst-badge {
     background: rgba(0, 209, 255, 0.1);
     color: #00D1FF;
-    padding: 4px 12px;
+    padding: 6px 16px;
     border-radius: 20px;
-    font-size: 0.75rem;
+    font-size: 0.95rem;
     font-weight: bold;
     border: 1px solid rgba(0, 209, 255, 0.3);
     display: inline-block;
@@ -115,8 +115,8 @@ div:has(> div > div > select) {
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
     color: white !important;
-    padding: 0.4rem 0.8rem !important;
-    font-size: 0.85rem !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 1rem !important;
     text-transform: none !important;
     width: auto !important;
     min-width: 80px !important;
@@ -150,27 +150,19 @@ div:has(> div > div > select) {
 
 /* Truly pinned bottom dock like ChatGPT */
 [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
-    position: fixed !important;
+    position: sticky !important;
     bottom: 0 !important;
-    left: 21rem !important;
-    right: 0 !important;
-    width: auto !important;
-    background: linear-gradient(0deg, var(--bg-dark) 50%, transparent 100%) !important;
-    padding: 80px 40px 30px 40px !important;
-    z-index: 10000 !important;
+    background: linear-gradient(0deg, var(--bg-dark) 40%, transparent 100%) !important;
+    padding: 60px 20px 20px 20px !important;
+    margin-bottom: -150px !important;
+    z-index: 1000 !important;
     pointer-events: none; /* Let clicks pass through the fade area */
+    border: none !important;
 }
 
 /* Re-enable clicking for the actual inner controls */
 [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) > div {
     pointer-events: auto !important;
-}
-
-@media (max-width: 992px) {
-    [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
-        left: 0 !important;
-        padding: 60px 10px 20px 10px !important;
-    }
 }
 
 /* The Floating Pill Bar */
@@ -196,7 +188,7 @@ div.bottom-dock-container [data-testid="stPopover"] button,
     background-color: #2D333F !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: #E2E8F0 !important;
-    font-size: 1.2rem !important;
+    font-size: 1.5rem !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;
@@ -211,8 +203,8 @@ div:has(> .main-header) + div [data-testid="stPopover"] button {
     width: auto !important;
     min-width: 100px !important;
     border-radius: 8px !important;
-    padding: 0.4rem 1rem !important;
-    font-size: 0.9rem !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 1rem !important;
 }
 
 /* Center the input block content */
@@ -231,9 +223,9 @@ div:has(> .main-header) + div [data-testid="stPopover"] button {
 .compact-tip {
     background-color: rgba(255, 171, 0, 0.1);
     color: #FFAB00;
-    padding: 8px 15px;
+    padding: 10px 20px;
     border-radius: 8px;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     max-width: 800px;
     margin: 0 auto 12px auto;
     text-align: center;
@@ -245,6 +237,28 @@ div:has(> .main-header) + div [data-testid="stPopover"] button {
 div[data-testid="column"]:first-child:has(button) {
     display: flex;
     justify-content: center;
+}
+
+/* Uploaded Files Tag View */
+.uploaded-files-container {
+    max-width: 800px;
+    margin: 0 auto 10px auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+}
+
+.uploaded-file-badge {
+    background-color: rgba(112, 0, 255, 0.15);
+    color: #bfaaff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid rgba(112, 0, 255, 0.3);
+    display: inline-flex;
+    align-items: center;
 }
 
 /* Space for the docked input at the bottom of the page */

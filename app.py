@@ -266,19 +266,48 @@ with chat_history_container:
                     if isinstance(s, dict):
                         name = s.get("name", "Unknown")
                         url = s.get("url", "")
+                        if not url:
+                            url = st.session_state.file_urls.get(name, "")
                         links.append(f"[{name}]({url})" if url else name)
                     else:
-                        links.append(str(s))
+                        url = st.session_state.file_urls.get(str(s), "")
+                        links.append(f"[{s}]({url})" if url else str(s))
                 st.caption(f"📚 *Sources referenced:* {', '.join(links)}")
 
 # --- CHAT INPUT & ATTACHMENT ROW ---
-input_row = st.container()
+input_row = st.container(border=True)
 with input_row:
     if not st.session_state.uploaded_files:
         st.markdown(
             '<div class="compact-tip">📊 <b>NeoStats Tip:</b> Upload a CSV, Schema, or PDF for better insights.</div>', 
             unsafe_allow_html=True
         )
+    else:
+        # Native Streamlit multiselect auto-generates pills with X marks for removal
+        selected = st.multiselect(
+            "📎 Active Context Files",
+            options=list(st.session_state.uploaded_files),
+            default=list(st.session_state.uploaded_files),
+            label_visibility="collapsed",
+            key="file_deleter_multiselect"
+        )
+        
+        # If the user clicked the 'X' on a pill, the length of selected will logically be smaller
+        if len(selected) != len(st.session_state.uploaded_files):
+            st.session_state.uploaded_files = set(selected)
+            for old_file in list(st.session_state.file_urls.keys()):
+                if old_file not in st.session_state.uploaded_files:
+                    del st.session_state.file_urls[old_file]
+            
+            if st.session_state.current_session_id:
+                from utils.supabase_db import update_session_metadata
+                update_session_metadata(
+                    st.session_state.current_session_id, 
+                    st.session_state.schema_context, 
+                    st.session_state.uploaded_files,
+                    file_urls=st.session_state.file_urls
+                )
+            st.rerun()
     
     # Optimized columns for the ChatGPT dock
     col_at, col_in = st.columns([0.65, 9.35], gap="small")
@@ -291,11 +320,6 @@ with input_row:
                 key="doc_uploader_dock",
                 label_visibility="collapsed"
             )
-            st.divider()
-            st.caption("Available Analyzers:")
-            st.button("📊 SQL Schema Analyst", disabled=True, use_container_width=True, key="sql_ana_dock")
-            st.button("📈 Trend Optimizer", disabled=True, use_container_width=True, key="trend_opt_dock")
-            st.button("🧠 Deep RAG Search", disabled=True, use_container_width=True, key="rag_search_dock")
             
             if uploaded_file and uploaded_file.name not in st.session_state.uploaded_files:
                 with st.spinner("Processing..."):
@@ -401,7 +425,12 @@ if user_input:
                 st.markdown(response)
                 
                 if used_sources:
-                    links = [f"[{s['name']}]({s['url']})" if s['url'] else s['name'] for s in used_sources]
+                    links = []
+                    for s in used_sources:
+                        url = s.get('url', "")
+                        if not url:
+                            url = st.session_state.file_urls.get(s['name'], "")
+                        links.append(f"[{s['name']}]({url})" if url else s['name'])
                     st.caption(f"📚 *Sources referenced:* {', '.join(links)}")
                 
                 # Save to history
