@@ -210,7 +210,7 @@ with st.popover("📎 Attach", help="Add documents or context"):
     st.markdown("##### 📎 NeoStats Data Context")
     uploaded_file = st.file_uploader(
         "Upload Data Source",
-        type=["txt", "csv", "pdf"],
+        type=["txt", "csv", "pdf", "sql", "dax", "rdl", "pbix", "twb", "twbx", "tds"],
         key="doc_uploader_main",
         label_visibility="collapsed"
     )
@@ -268,12 +268,16 @@ with chat_history_container:
     with st.chat_message("assistant"):
         st.markdown("""
         ### 👋 Welcome to NeoStats Data Analyst AI
-        I am your specialized assistant for **SQL, PostgreSQL, MongoDB, and NoSQL** analytics.
+        I am your specialized assistant for **SQL, Power BI, Tableau, DAX, and NoSQL** analytics.
         
         **How to get started:**
-        1.  📎 **Upload your Data**: Use the 'Attach' button below to upload a **CSV**, **Table Schema**, or **SQL Documentation**.
-        2.  🔍 **Analyze**: Ask me to write queries, explain trends, or optimize logic based on your data.
-        3.  ⚖️ **Mode**: Toggle between **Concise** (quick SQL) and **Detailed** (deep reasoning) in the top menu.
+        1.  📎 **Upload your Data**: Use the 'Attach' button to upload files:
+            - 📄 **Data files**: CSV, TXT, PDF
+            - 🗃️ **SQL**: `.sql` query files
+            - 📊 **Power BI**: `.pbix` workbooks, `.dax` queries, `.rdl` reports
+            - 📈 **Tableau**: `.twb` / `.twbx` workbooks, `.tds` data sources
+        2.  🔍 **Analyze**: Ask me to write queries, explain DAX measures, optimize Tableau calcs, or find trends.
+        3.  ⚖️ **Mode**: Toggle between **Concise** (quick answers) and **Detailed** (deep reasoning) in the top menu.
         
         *Note: I am strictly specialized for data analysis and will only respond to analytics-related inquiries.*
         """)
@@ -366,9 +370,16 @@ if user_input:
 
                 # Persona
                 base_system_prompt = (
-                    "You are the NeoStats Data Analyst AI, an expert specialized EXCLUSIVELY in data analytics, SQL (PostgreSQL, MySQL, SQLite), NoSQL, MongoDB queries, and business intelligence. "
-                    "Strict Policy: You MUST only answer questions related to data analysis, SQL/NoSQL queries, data trends, or analytics documentation. "
-                    "You are proficient in generating complex queries for MongoDB (Aggregations), PostgreSQL (JSONB, Window Functions), and other modern database systems. "
+                    "You are the NeoStats Data Analyst AI, an expert specialized EXCLUSIVELY in data analytics, "
+                    "SQL (PostgreSQL, MySQL, SQLite), NoSQL, MongoDB queries, business intelligence, "
+                    "Power BI (PBIX, DAX measures, Power Query/M, data modeling, relationships, calculated columns), "
+                    "Tableau (workbook analysis, calculated fields, LOD expressions, data source connections, dashboard optimization), "
+                    "and SSRS/Paginated Reports (RDL files, report parameters, dataset queries). "
+                    "Strict Policy: You MUST only answer questions related to data analysis, SQL/NoSQL queries, "
+                    "DAX formulas, Tableau calculations, Power BI modeling, data trends, or analytics documentation. "
+                    "You are proficient in: generating complex SQL queries for MongoDB (Aggregations), PostgreSQL (JSONB, Window Functions); "
+                    "writing and optimizing DAX measures and calculated columns; analyzing Tableau workbook structures and LOD expressions; "
+                    "reading and interpreting PBIX data models; and understanding RDL report definitions. "
                     "If the user asks about ANY other topic, remind them you are an analytics specialist."
                 )
                 
