@@ -15,8 +15,11 @@ def search_web(query):
             search_results = ddgs.text(query, max_results=5)
 
             for r in search_results:
-
-                results.append(r["body"])
+                results.append({
+                    "body": r["body"],
+                    "title": r.get("title", "Web Result"),
+                    "url": r.get("href")
+                })
 
         return results
 

@@ -7,7 +7,7 @@ from utils.document_processor import process_uploaded_file
 from utils.supabase_db import (
     login_user, signup_user, get_chat_history,
     save_chat, restore_user_session, logout_user,
-    get_chat_sessions, create_chat_session
+    get_chat_sessions, create_chat_session, update_session_metadata
 )
 from utils.cloudinary_storage import upload_document_to_cloudinary
 
@@ -43,6 +43,9 @@ if "messages" not in st.session_state:
 
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = set()
+
+if "file_urls" not in st.session_state:
+    st.session_state.file_urls = {}
 
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
@@ -88,7 +91,16 @@ with st.sidebar:
                     st.session_state.schema_context = ""
                     for chat in history:
                         st.session_state.messages.append({"role": "user", "content": chat["user_message"]})
-                        st.session_state.messages.append({"role": "assistant", "content": chat["ai_message"]})
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": chat["ai_message"],
+                            "sources": chat.get("sources") if chat.get("sources") is not None else []
+                        })
+                    
+                    # Restore Context from Session
+                    st.session_state.uploaded_files = set(s.get("uploaded_files", []))
+                    st.session_state.file_urls = s.get("file_urls", {})
+                    st.session_state.schema_context = s.get("schema_context", "")
                     st.rerun()
         else:
             st.caption("No recent chats.")
@@ -152,7 +164,7 @@ if st.session_state.show_login and not st.session_state.user:
 st.markdown('<div class="main-header">', unsafe_allow_html=True)
 col_title, _ = st.columns([0.65, 0.35])
 with col_title:
-    st.markdown("### 📊 Data Analyst AI Assistant")
+    st.markdown("### 📊 NeoStats Data Analyst AI")
 
 # --- MAIN CHAT UI CONTROLS ---
 col_model, col_mode = st.columns([3, 0.8], gap="small")
@@ -200,6 +212,21 @@ with st.popover("📎 Attach", help="Add documents or context"):
                     if schema_info:
                         st.session_state.schema_context += f"\n\nSource: {uploaded_file.name}\nSchema: {schema_info}"
                     st.session_state.uploaded_files.add(uploaded_file.name)
+                    st.session_state.file_urls[uploaded_file.name] = c_url
+                    
+                    # Persist metadata to DB if session exists
+                    if st.session_state.current_session_id:
+                        update_session_metadata(
+                            st.session_state.current_session_id, 
+                            st.session_state.schema_context, 
+                            st.session_state.uploaded_files,
+                            file_urls=st.session_state.file_urls
+                        )
+                    for chunk in chunks:
+                        st.session_state.vector_store.add_document(
+                            chunk, 
+                            metadata={"source": uploaded_file.name, "url": c_url}
+                        )
                     st.rerun()
                 else:
                     st.error(error)
@@ -234,10 +261,17 @@ with chat_history_container:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             if msg["role"] == "assistant" and msg.get("sources"):
-                st.caption(f"📚 *Sources referenced:* {', '.join(msg['sources'])}")
+                links = []
+                for s in msg["sources"]:
+                    if isinstance(s, dict):
+                        name = s.get("name", "Unknown")
+                        url = s.get("url", "")
+                        links.append(f"[{name}]({url})" if url else name)
+                    else:
+                        links.append(str(s))
+                st.caption(f"📚 *Sources referenced:* {', '.join(links)}")
 
 # --- CHAT INPUT & ATTACHMENT ROW ---
-st.markdown('<div class="bottom-dock-container">', unsafe_allow_html=True)
 input_row = st.container()
 with input_row:
     if not st.session_state.uploaded_files:
@@ -275,6 +309,22 @@ with input_row:
                             if schema_info:
                                 st.session_state.schema_context += f"\n\nSource: {uploaded_file.name}\nSchema: {schema_info}"
                             st.session_state.uploaded_files.add(uploaded_file.name)
+                            st.session_state.file_urls[uploaded_file.name] = c_url
+                            
+                            # Persist metadata to DB if session exists
+                            if st.session_state.current_session_id:
+                                from utils.supabase_db import update_session_metadata
+                                update_session_metadata(
+                                    st.session_state.current_session_id, 
+                                    st.session_state.schema_context, 
+                                    st.session_state.uploaded_files,
+                                    file_urls=st.session_state.file_urls
+                                )
+                            for chunk in chunks:
+                                st.session_state.vector_store.add_document(
+                                    chunk, 
+                                    metadata={"source": uploaded_file.name, "url": c_url}
+                                )
                             st.rerun()
                         else:
                             st.error(error)
@@ -283,7 +333,6 @@ with input_row:
 
     with col_in:
         user_input = st.chat_input("Ask your analytics question...")
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Process input if it exists
 if user_input:
@@ -295,19 +344,30 @@ if user_input:
 
         # 2. Assistant Response
         with st.chat_message("assistant"):
-            with st.spinner("🧠 NeoStats Analyst is thinking..."):
+            with st.spinner("🧠 NeoStats Data Analyst AI is thinking..."):
                 # RAG & Context Prep
                 rag_results = st.session_state.vector_store.search(user_input)
-                used_sources = set()
+                used_sources = []
+                seen_sources = set()
                 rag_context_parts = []
+                
                 for res in rag_results:
                     source_name = res["metadata"].get("source", "Unknown Document")
-                    used_sources.add(source_name)
+                    source_url = res["metadata"].get("url", "")
+                    if source_name not in seen_sources:
+                        used_sources.append({"name": source_name, "url": source_url})
+                        seen_sources.add(source_name)
                     rag_context_parts.append(f"[Source: {source_name}]\n{res['text']}")
                 rag_context = "\n\n".join(rag_context_parts)
                 
                 web_results = search_web(user_input)
-                web_context = "\n".join(web_results)
+                web_context_parts = []
+                for res in web_results:
+                    if res["title"] not in seen_sources:
+                        used_sources.append({"name": res["title"], "url": res["url"]})
+                        seen_sources.add(res["title"])
+                    web_context_parts.append(f"[Web Source: {res['title']}]\n{res['body']}")
+                web_context = "\n".join(web_context_parts)
                 context = f"{rag_context}\n\n{web_context}"
 
                 # Persona
@@ -341,7 +401,8 @@ if user_input:
                 st.markdown(response)
                 
                 if used_sources:
-                    st.caption(f"📚 *Sources referenced:* {', '.join(used_sources)}")
+                    links = [f"[{s['name']}]({s['url']})" if s['url'] else s['name'] for s in used_sources]
+                    st.caption(f"📚 *Sources referenced:* {', '.join(links)}")
                 
                 # Save to history
                 st.session_state.messages.append({
@@ -355,7 +416,13 @@ if user_input:
                         title = user_input[:30] + "..." if len(user_input) > 30 else user_input
                         st.session_state.current_session_id = create_chat_session(st.session_state.user.id, title=title)
                     
-                    saved, save_error = save_chat(st.session_state.user.id, st.session_state.current_session_id, user_input, response)
+                    saved, save_error = save_chat(
+                        st.session_state.user.id, 
+                        st.session_state.current_session_id, 
+                        user_input, 
+                        response,
+                        sources=list(used_sources)
+                    )
                     if not saved:
                         st.toast(f"⚠️ Chat could not be saved: {save_error}", icon="⚠️")
                         if "relation \"chat_sessions\" does not exist" in str(save_error) or "column \"session_id\" of relation \"chats\" does not exist" in str(save_error):
@@ -371,7 +438,12 @@ if user_input:
                                 created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
                             );
                             
+                            ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS schema_context TEXT;
+                            ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS uploaded_files JSONB DEFAULT '[]'::jsonb;
+                            ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS file_urls JSONB DEFAULT '{}'::jsonb;
+                            
                             ALTER TABLE chats ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE;
+                            ALTER TABLE chats ADD COLUMN IF NOT EXISTS sources JSONB DEFAULT '[]'::jsonb;
                             ```
                             """)
 

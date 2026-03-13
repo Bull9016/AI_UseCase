@@ -132,6 +132,21 @@ def logout_user():
     st.session_state.messages = []
 
 
+def update_session_metadata(session_id, schema_context, uploaded_files, file_urls=None):
+    """Update session with current data context (schema and file list)."""
+    try:
+        supabase = get_supabase_client()
+        supabase.table("chat_sessions").update({
+            "schema_context": schema_context,
+            "uploaded_files": list(uploaded_files),
+            "file_urls": file_urls or {}
+        }).eq("id", session_id).execute()
+        return True
+    except Exception as e:
+        print(f"[UPDATE SESSION ERROR] {e}")
+        return False
+
+
 def get_chat_sessions(user_id):
     """Fetch all chat sessions for the user."""
     try:
@@ -178,17 +193,16 @@ def get_chat_history(session_id):
         return []
 
 
-def save_chat(user_id, session_id, user_message, ai_message):
+def save_chat(user_id, session_id, user_message, ai_message, sources=None):
     """Save chat to Supabase. Returns (True, None) or (False, error_msg)."""
     try:
         supabase = get_supabase_client()
         
-        # If no session_id is provided, try to insert without it (backward compatibility with original schema)
-        # But our new DB expects session_id.
         data = {
             "user_id": user_id,
             "user_message": user_message,
-            "ai_message": ai_message
+            "ai_message": ai_message,
+            "sources": sources # Store sources as a list/json
         }
         if session_id:
             data["session_id"] = session_id

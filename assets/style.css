@@ -149,7 +149,7 @@ div:has(> div > div > select) {
 }
 
 /* Truly pinned bottom dock like ChatGPT */
-.bottom-dock-container {
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
     position: fixed !important;
     bottom: 0 !important;
     left: 21rem !important;
@@ -158,23 +158,23 @@ div:has(> div > div > select) {
     background: linear-gradient(0deg, var(--bg-dark) 50%, transparent 100%) !important;
     padding: 80px 40px 30px 40px !important;
     z-index: 10000 !important;
-    pointer-events: none; /* Allow clicking through the fade area */
+    pointer-events: none; /* Let clicks pass through the fade area */
 }
 
-/* Allow interaction with the input bar itself */
-.bottom-dock-container > div {
-    pointer-events: auto;
+/* Re-enable clicking for the actual inner controls */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) > div {
+    pointer-events: auto !important;
 }
 
 @media (max-width: 992px) {
-    .bottom-dock-container {
+    [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
         left: 0 !important;
         padding: 60px 10px 20px 10px !important;
     }
 }
 
-/* The Floating Bar itself */
-.bottom-dock-container [data-testid="stHorizontalBlock"] {
+/* The Floating Pill Bar */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stHorizontalBlock"] {
     max-width: 800px !important;
     margin: 0 auto !important;
     background-color: #262730 !important;
@@ -215,10 +215,10 @@ div:has(> .main-header) + div [data-testid="stPopover"] button {
     font-size: 0.9rem !important;
 }
 
-@media (max-width: 768px) {
-    [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) {
-        width: 100% !important;
-    }
+/* Center the input block content */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stChatInput"]) [data-testid="stHorizontalBlock"] {
+    max-width: 800px !important;
+    margin: 0 auto !important;
 }
 
 /* Center all children of the pinned area */
