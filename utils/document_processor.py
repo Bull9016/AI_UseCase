@@ -70,7 +70,6 @@ def parse_pdf(file_bytes):
     """Parse a .pdf file into text. Uses PyPDF2 if available."""
     try:
         import PyPDF2
-        import io
 
         reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
         text_parts = []
@@ -332,7 +331,6 @@ def parse_twb(file_bytes):
             # Extract calculated fields
             for calc in ds.iter("calculation"):
                 formula = calc.get("formula", "")
-                col_parent = calc.getparent() if hasattr(calc, 'getparent') else None
                 if formula:
                     extracted_parts.append(f"-- Calculated Field\n{formula}")
 

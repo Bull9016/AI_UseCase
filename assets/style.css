@@ -72,15 +72,11 @@
     }
 }
 
-/* Custom Header */
+/* Custom Header - gradient branding container */
 .main-header {
-    background: linear-gradient(90deg, #00D1FF, #7000FF);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 800;
-    font-size: 2.5rem;
-    margin-bottom: 2rem;
+    margin-top: 0px;
+    padding-top: 10px;
+    margin-bottom: 20px;
 }
 
 /* Header Branding Container */
@@ -125,12 +121,6 @@ div:has(> div > div > select) {
 [data-testid="stPopover"] button:hover {
     background-color: rgba(255, 255, 255, 0.05) !important;
     border-color: var(--primary) !important;
-}
-
-/* Main Header Context */
-.main-header {
-    margin-top: -40px;
-    margin-bottom: 10px;
 }
 
 .main-header h3 {

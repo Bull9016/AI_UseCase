@@ -42,7 +42,7 @@ def load_css(file_name):
 
 try:
     load_css("assets/style.css")
-except:
+except FileNotFoundError:
     pass
 
 # --- INIT SESSION STATES ---
@@ -228,7 +228,10 @@ with st.popover("📎 Attach", help="Add documents or context"):
                 chunks, schema_info, error = process_uploaded_file(uploaded_file)
                 if not error:
                     for chunk in chunks:
-                        st.session_state.vector_store.add_document(chunk, metadata={"source": uploaded_file.name})
+                        st.session_state.vector_store.add_document(
+                            chunk, 
+                            metadata={"source": uploaded_file.name, "url": c_url}
+                        )
                     if schema_info:
                         st.session_state.schema_context += f"\n\nSource: {uploaded_file.name}\nSchema: {schema_info}"
                     st.session_state.uploaded_files.add(uploaded_file.name)
@@ -241,11 +244,6 @@ with st.popover("📎 Attach", help="Add documents or context"):
                             st.session_state.schema_context, 
                             st.session_state.uploaded_files,
                             file_urls=st.session_state.file_urls
-                        )
-                    for chunk in chunks:
-                        st.session_state.vector_store.add_document(
-                            chunk, 
-                            metadata={"source": uploaded_file.name, "url": c_url}
                         )
                     st.rerun()
                 else:
@@ -384,18 +382,16 @@ if user_input:
                 )
                 
                 if mode == "Concise":
-                    system_prompt = f"{base_system_prompt}\nGive short, precise answers focused on SQL queries."
+                    system_prompt = f"{base_system_prompt}\nGive short, precise answers focused on queries, formulas, and actionable results."
                 else:
-                    system_prompt = f"{base_system_prompt}\nProvide detailed explanations of query logic and analytical reasoning."
+                    system_prompt = f"{base_system_prompt}\nProvide detailed explanations of query logic, DAX formula reasoning, Tableau calculation breakdowns, and analytical insights."
 
                 if st.session_state.schema_context:
                     system_prompt += f"\n\nAnalyzable Data Schema Knowledge:\n{st.session_state.schema_context}"
 
-                full_prompt = f"Context:\n{st.session_state.schema_context}\n{context}\n\nQuestion: {user_input}"
-                
                 messages = [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Context:\n{context}\n\nQuestion:{user_input}"}
+                    {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_input}"}
                 ]
 
                 try:
